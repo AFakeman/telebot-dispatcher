@@ -31,15 +31,26 @@ def process_bot():
         return "Accepted Content-Type: application/json"
     data_utf8 = request.data.decode('UTF-8')
     update = json.loads(data_utf8)
-    if "message" not in update:
-        print("No message in update, skipping...")
-        return
-    if not "chat" in update["message"]:
-        print("No chat in message, skipping...")
-        return
-    chat_id = update["message"]["chat"]["id"]
+    chat_id = get_chat_id(update)
     update_to_queue(chat_id, request.data)
     return ""
+
+
+def get_chat_id(update):
+    possible_keys = [
+        "message",
+        "edited_message",
+        "channel_post",
+        "edited_channel_post",
+        "inline_query",
+        "chosen_inline_query",
+        "callback_query"
+    ]
+
+    for key in possible_keys:
+        if key in update:
+            return update[key]["chat"]["id"]
+
 
 
 def get_chat_worker(chat_id):
