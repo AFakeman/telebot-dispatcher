@@ -42,16 +42,14 @@ def get_chat_id(update):
         "edited_message",
         "channel_post",
         "edited_channel_post",
-        "inline_query",
-        "chosen_inline_query",
-        "callback_query"
     ]
 
     for key in possible_keys:
         if key in update:
             return update[key]["chat"]["id"]
 
-
+    if "callback_query" in update:
+        return update["callback_query"]["message"]["chat"]["id"]
 
 def get_chat_worker(chat_id):
     ctw = redis_ctw_root.format(str(chat_id))
