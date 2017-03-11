@@ -11,11 +11,8 @@ redis_client = redis.Redis(host=app.config["REDIS_HOST"],
                            password=app.config["REDIS_PASSWORD"],
                            db=app.config["REDIS_DB"])
 
-redis_workers = "workers"
-redis_worker_queue_root = "worker_queue:{0}"
-redis_workers_alive_root = "worker_registry:{0}"
-redis_ctw_root = "chat_to_worket:{0}"
-redis_ctw_expire = 60
+redis_update_queue_root = "update_queue:"
+
 
 def random_string(alphabet, length):
     result = ""
@@ -51,39 +48,9 @@ def get_chat_id(update):
     if "callback_query" in update:
         return update["callback_query"]["message"]["chat"]["id"]
 
-def get_chat_worker(chat_id):
-    ctw = redis_ctw_root.format(str(chat_id))
-
-    if not redis_client.exists(ctw):
-        new_worker_needed = True
-    else:
-        worker = redis_client.get(ctw).decode("UTF-8")
-        new_worker_needed = not is_alive(worker)
-
-    if new_worker_needed:
-        worker = get_new_worker()
-
-    redis_client.setex(ctw, worker, redis_ctw_expire)
-    return worker
-
-
-
-def get_new_worker():
-    while redis_client.scard(redis_workers) != 0:
-        candidate = redis_client.srandmember(redis_workers).decode("UTF-8")
-        if is_alive(candidate):
-            return candidate
-        else:
-            print("Kicking {0} due to no response".format(candidate))
-            redis_client.srem(redis_workers, candidate)
-    print("No workers available!")
-
-
-def is_alive(worker):
-    return redis_client.exists(redis_workers_alive_root.format(worker))
+    return -1
 
 
 def update_to_queue(chat_id, update):
-    worker = get_chat_worker(chat_id)
-    queue = redis_worker_queue_root.format(worker)
+    queue = redis_update_queue_root + str(chat_id)
     redis_client.lpush(queue, update)
